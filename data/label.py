@@ -1,6 +1,6 @@
 import enum
 
-class Labels(enum.Enum):
+class Label(enum.Enum):
     AMBIENT = 0
     ECHEME = 1
     CALL = 2
