@@ -1,9 +1,15 @@
 # Label IDs
 0 (implied) = ambient
+
 1 = echeme
+
 2 = call -- multiple echemnes in a sequence, but not quite as fast as a trill
+
 3 = trill
+
 4 = noise
+
+In some cases where I could more specifically, identify the noise, I use a text label, e.g. "bird" or "phone"
 
 # Label Format
 TSV (Tab-separated) files with lines in the following format:
