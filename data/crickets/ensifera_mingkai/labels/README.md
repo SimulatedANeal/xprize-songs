@@ -10,6 +10,10 @@ TSV (Tab-separated) files with lines in the following format:
 
 `START_TIME    STOP_TIME    LABEL_ID`
 
+Times are in seconds. 
+
+Filenames (minus extension) match the filename of its corresponding audio file
+in the corresponding species directory of the same name.
 
 # Notes
 ## General
