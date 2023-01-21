@@ -3,7 +3,7 @@
 
 1 = echeme
 
-2 = call -- multiple echemnes in a sequence, but not quite as fast as a trill
+2 = calling song -- multiple echemnes in a sequence
 
 3 = trill
 
