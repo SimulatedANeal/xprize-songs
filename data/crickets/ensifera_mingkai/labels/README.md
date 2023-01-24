@@ -1,15 +1,17 @@
 # Label IDs
 0 (implied) = ambient
 
-1 = echeme
+1 = syllable
 
-2 = calling song -- multiple echemnes in a sequence
+2 = echeme
 
 3 = trill
 
-4 = noise
+4 = echeme sequence, call
 
-In some cases where I could more specifically, identify the noise, I use a text label, e.g. "bird" or "phone"
+5 = noise
+
+In some cases where I could more specifically identify the noise, I use a text label, e.g. "bird" or "phone"
 
 # Label Format
 TSV (Tab-separated) files with lines in the following format:
