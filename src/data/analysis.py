@@ -66,22 +66,26 @@ def load_all_labels(root_dir, species_list):
         print("")
     return all_labels
 
-def plot_example_counts(species_dict):
+def plot_example_counts(species_dict, title, display_fn=len, y_label='Count'):
     labels = list(species_dict.keys())
     width = 0.35  # the width of the bars
     height = [0] * len(labels)
     fig, ax = plt.subplots()
     for i, l in enumerate([Label.SYLLABLE, Label.ECHEME, Label.TRILL, Label.CALL]):
-        counts = [len(v[l]) for k,v in species_dict.items()]
+        counts = [display_fn(v[l]) for k,v in species_dict.items()]
         ax.bar(labels, counts, width, label=l.name, bottom=height)
         height = [x + y for (x, y) in zip(counts, height)]
-    ax.set_ylabel('Count')
-    ax.set_title('Example Count by Species and Type')
+    ax.set_ylabel(y_label)
+    ax.set_title(title)
     plt.xticks(rotation=45, ha='right')
     ax.legend()
     fig.tight_layout()
     plt.show()
 
+
+def get_total_time(label_list):
+    time = sum(t2 - t1 for (t1, t2), _ in label_list)
+    return time
 
 def main():
     args = get_args()
@@ -93,7 +97,16 @@ def main():
     species_list.sort()
 
     all_labels = load_all_labels(root_dir, species_list)
-    plot_example_counts(species_dict=all_labels)
+    plot_example_counts(
+        species_dict=all_labels,
+        title='Example Count by Species and Type',
+        display_fn=len,
+        y_label='Count')
+    plot_example_counts(
+        species_dict=all_labels,
+        title='Total Example Time by Species and Type',
+        display_fn=get_total_time,
+        y_label="Time (s)")
 
 
 def get_args():
