@@ -3,6 +3,7 @@ import os
 from collections import defaultdict
 from glob import glob
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from label import Label
@@ -49,6 +50,38 @@ def show_label_stats(label_dict):
         print(f"\tMean length: {np.mean(lengths_ms):.2f}ms")
 
 
+def load_all_labels(root_dir, species_list):
+    all_labels = dict()
+    for species in species_list:
+        species_labels = defaultdict(list)
+        print(f"{species.upper()}\n{'=' * len(species)}")
+        label_files = glob(os.path.join(root_dir, species, '*.txt'))
+        print(f"Number of labelled audio files: {len(label_files)}")
+        for f in label_files:
+            labels = load_label_file(f)
+            for k in labels:
+                species_labels[k].extend(labels[k])
+        all_labels[species] = species_labels
+        show_label_stats(species_labels)
+        print("")
+    return all_labels
+
+def plot_example_counts(species_dict):
+    labels = list(species_dict.keys())
+    width = 0.35  # the width of the bars
+    height = [0] * len(labels)
+    fig, ax = plt.subplots()
+    for i, l in enumerate([Label.SYLLABLE, Label.ECHEME, Label.TRILL, Label.CALL]):
+        counts = [len(v[l]) for k,v in species_dict.items()]
+        ax.bar(labels, counts, width, label=l.name, bottom=height)
+        height = [x + y for (x, y) in zip(counts, height)]
+    ax.set_ylabel('Count')
+    ax.set_title('Example Count by Species and Type')
+    plt.xticks(rotation=45, ha='right')
+    ax.legend()
+    fig.tight_layout()
+    plt.show()
+
 
 def main():
     args = get_args()
@@ -59,17 +92,8 @@ def main():
         if os.path.isdir(os.path.join(root_dir, d))]
     species_list.sort()
 
-    for species in species_list:
-        all_labels  = defaultdict(list)
-        print(f"{species.upper()}\n{'=' * len(species)}")
-        label_files = glob(os.path.join(root_dir, species, '*.txt'))
-        print(f"Number of labelled audio files: {len(label_files)}")
-        for f in label_files:
-            labels = load_label_file(f)
-            for k in labels:
-                all_labels[k].extend(labels[k])
-        show_label_stats(all_labels)
-        print("")
+    all_labels = load_all_labels(root_dir, species_list)
+    plot_example_counts(species_dict=all_labels)
 
 
 def get_args():
