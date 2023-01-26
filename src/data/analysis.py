@@ -5,6 +5,8 @@ from glob import glob
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tabulate import tabulate, SEPARATING_LINE
+
 
 from label import Label
 
@@ -36,45 +38,71 @@ def load_label_file(filepath):
     return label_dict
 
 
-def show_label_stats(label_dict):
-    for label, times in label_dict.items():
-        print(f"{label.name} stats:" )
-        print(f"\tNumber of labelled examples: {len(times)}")
-        lengths_ms = [(stop - start) * MS for (start, stop), _ in times]
-        print(
-            f"\tMaximum length: {max(lengths_ms):.2f}ms "
-            f"(File: {times[lengths_ms.index(max(lengths_ms))][1]})")
-        print(
-            f"\tMinimum length: {min(lengths_ms):.2f}ms "
-            f"(File: {times[lengths_ms.index(min(lengths_ms))][1]})")
-        print(f"\tMean length: {np.mean(lengths_ms):.2f}ms")
+def load_and_tabulate_data(root_dir, species_list, save_file='table.txt'):
+    table = []
+    header = ["Species", "# Labelled Audio Files"]
+    for label in Label.valid():
+        header.extend([
+            f"# {label.name} Examples",
+            f"{label.name} Max. length (ms)",
+            f"{label.name} Min. length (ms)",
+            f"{label.name} Mean length (ms)"])
 
-
-def load_all_labels(root_dir, species_list):
     all_labels = dict()
+    lengths = defaultdict(list)
     for species in species_list:
+        row = [species]
         species_labels = defaultdict(list)
-        print(f"{species.upper()}\n{'=' * len(species)}")
         label_files = glob(os.path.join(root_dir, species, '*.txt'))
-        print(f"Number of labelled audio files: {len(label_files)}")
+        row.append(len(label_files))
         for f in label_files:
             labels = load_label_file(f)
-            for k in labels:
-                species_labels[k].extend(labels[k])
+            for call_type, examples in labels.items():
+                species_labels[call_type].extend(examples)
         all_labels[species] = species_labels
-        show_label_stats(species_labels)
-        print("")
+        for label in Label.valid():
+            examples = species_labels[label]
+            if len(examples):
+                row.append(len(examples))
+                lengths_ms = [(t2 - t1) * MS for (t1, t2), _ in examples]
+                row.append(float(f"{max(lengths_ms):.2f}"))
+                row.append(float(f"{min(lengths_ms):.2f}"))
+                row.append(float(f"{np.mean(lengths_ms):.2f}"))
+                lengths[label].extend(lengths_ms)
+            else:
+                row.extend(["", "", "", ""])
+        table.append(row)
+    total_row = ["All Data"]
+    total_row.append(sum(r[1] for r in table))  # File count
+    for label in Label.valid():
+        total_row.append(len(lengths[label]))
+        total_row.append(float(f"{max(lengths[label]):.2f}"))
+        total_row.append(float(f"{min(lengths[label]):.2f}"))
+        total_row.append(float(f"{np.mean(lengths[label]):.2f}"))
+    table.append(SEPARATING_LINE)
+    table.append(total_row)
+    formatted_table = tabulate(
+        table,
+        headers=header,
+        tablefmt="latex",
+        colalign=['left'] + ['decimal'] * (len(table[0]) - 1),
+        floatfmt=".2f")
+    print(formatted_table)
+    if save_file:
+        with open(save_file, 'w') as o:
+            o.write(formatted_table)
     return all_labels
 
-def plot_example_counts(species_dict, title, display_fn=len, y_label='Count'):
-    labels = list(species_dict.keys())
+
+def plot_example_stats(all_species_dict, title, bar_fn=len, y_label='Count'):
+    labels = list(all_species_dict.keys())
     width = 0.35  # the width of the bars
-    height = [0] * len(labels)
+    total_height = [0] * len(labels)
     fig, ax = plt.subplots()
-    for i, l in enumerate([Label.SYLLABLE, Label.ECHEME, Label.TRILL, Label.CALL]):
-        counts = [display_fn(v[l]) for k,v in species_dict.items()]
-        ax.bar(labels, counts, width, label=l.name, bottom=height)
-        height = [x + y for (x, y) in zip(counts, height)]
+    for i, l in enumerate(Label.non_noise()):
+        xx = [bar_fn(v[l]) for k,v in all_species_dict.items()]
+        ax.bar(labels, xx, width, label=l.name, bottom=total_height)
+        total_height = [x + h for (x, h) in zip(xx, total_height)]
     ax.set_ylabel(y_label)
     ax.set_title(title)
     plt.xticks(rotation=45, ha='right')
@@ -96,17 +124,17 @@ def main():
         if os.path.isdir(os.path.join(root_dir, d))]
     species_list.sort()
 
-    all_labels = load_all_labels(root_dir, species_list)
-    plot_example_counts(
-        species_dict=all_labels,
-        title='Example Count by Species and Type',
-        display_fn=len,
-        y_label='Count')
-    plot_example_counts(
-        species_dict=all_labels,
-        title='Total Example Time by Species and Type',
-        display_fn=get_total_time,
-        y_label="Time (s)")
+    all_labels = load_and_tabulate_data(root_dir, species_list)
+    # plot_example_stats(
+    #     all_species_dict=all_labels,
+    #     title='Example Count by Species and Type',
+    #     bar_fn=len,
+    #     y_label='Count')
+    # plot_example_stats(
+    #     all_species_dict=all_labels,
+    #     title='Total Example Time by Species and Type',
+    #     bar_fn=get_total_time,
+    #     y_label="Time (s)")
 
 
 def get_args():
