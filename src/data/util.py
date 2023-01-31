@@ -1,4 +1,13 @@
+import os
 import re
+
+
+def get_species_list(root_dir):
+    species_list = [
+        d for d in os.listdir(root_dir)
+        if os.path.isdir(os.path.join(root_dir, d))]
+    species_list.sort()
+    return species_list
 
 
 def snake_case(s):
