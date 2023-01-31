@@ -40,6 +40,7 @@ def pad(t1, t2, pad_by, available_left, available_right):
 def read_wav(filepath):
     file_contents = tf.io.read_file(filepath)
     audio, sample_rate = tf.audio.decode_wav(file_contents, desired_channels=1)
+    # audio = tf.squeeze(audio, axis=-1)
     sample_rate = tf.cast(sample_rate, dtype=tf.int32)
     length_s = audio.shape[0] / sample_rate.numpy()
     return audio, sample_rate, length_s
@@ -83,6 +84,7 @@ def main():
                 audio_files.extend(glob(os.path.join(audio_dir, species, f'{filename}.{ext}')))
             audio_file = audio_files[0]  # Should be only one
             audio, sample_rate, length_s = read_wav(audio_file)
+            print(sample_rate, length_s, audio)
 
             # Pad or split to correct segment length
             segments_to_save = []
