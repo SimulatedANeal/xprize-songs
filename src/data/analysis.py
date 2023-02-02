@@ -1,7 +1,6 @@
 import argparse
 from collections import defaultdict
 
-import matplotlib.pyplot as plt
 import numpy as np
 from tabulate import tabulate, SEPARATING_LINE
 
@@ -9,6 +8,8 @@ from label import Label
 from myio import load_labels
 from util import get_species_list
 from data.crickets.ensifera_mingkai.split import test_files
+
+from plotting import example_stats
 
 
 MS = 1000.
@@ -63,23 +64,6 @@ def load_and_tabulate_data(root_dir, species_list, save_file='table.txt'):
         with open(save_file, 'w') as o:
             o.write(formatted_table)
     return all_labels
-
-
-def plot_example_stats(all_species_dict, title, bar_fn=len, y_label='Count'):
-    labels = list(all_species_dict.keys())
-    width = 0.35  # the width of the bars
-    total_height = [0] * len(labels)
-    fig, ax = plt.subplots()
-    for i, l in enumerate(Label.non_noise()):
-        xx = [bar_fn(v[l]) for k,v in all_species_dict.items()]
-        ax.bar(labels, xx, width, label=l.name, bottom=total_height)
-        total_height = [x + h for (x, h) in zip(xx, total_height)]
-    ax.set_ylabel(y_label)
-    ax.set_title(title)
-    plt.xticks(rotation=45, ha='right')
-    ax.legend()
-    fig.tight_layout()
-    plt.show()
 
 
 def get_total_time(label_list):

@@ -1,17 +1,13 @@
 import argparse
 import os
-import random
 from collections import defaultdict
 from glob import glob
 
-import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow_io as tfio
-import tensorflow as tf
 
 from data.crickets.ensifera_mingkai.split import test_files
 from label import Label
-from myio import load_labels
+from myio import load_labels, read_wav, save_wav_slice
 from util import get_species_list
 
 
@@ -36,22 +32,6 @@ def pad(t1, t2, pad_by, available_left, available_right):
     new_t2 = t2 + pad_right
     return new_t1, new_t2
 
-
-def read_wav(filepath):
-    file_contents = tf.io.read_file(filepath)
-    audio, sample_rate = tf.audio.decode_wav(file_contents, desired_channels=1)
-    # audio = tf.squeeze(audio, axis=-1)
-    sample_rate = tf.cast(sample_rate, dtype=tf.int32)
-    length_s = audio.shape[0] / sample_rate.numpy()
-    return audio, sample_rate, length_s
-
-
-def save_wav_slice(wav, sample_rate, start_s, stop_s, filename):
-    rate = sample_rate.numpy()
-    ix1, ix2 = int(start_s * rate), int(stop_s * rate)
-    sample = wav[ix1:ix2]
-    encoded = tf.audio.encode_wav(sample, sample_rate=sample_rate)
-    tf.io.write_file(filename, encoded)
 
 def main():
     args = get_args()
@@ -140,20 +120,6 @@ def main():
             silence_to_save = [
                 (t1, t2) for t1, t2 in silence_to_save
                 if not any(overlapping(t1, t2, t3, t4) for t3, t4 in sounds)]
-
-            # rate = sample_rate.numpy()
-            # window = int(rate / MS)  # 1ms windows for spectogram
-            # stride = int(window / 2)
-            # for t1, t2 in random.sample(silence_to_save, min(2, len(silence_to_save))):
-            #     ix1, ix2 = int(t1 * rate), int(t2 * rate)
-            #     sample = audio[ix1:ix2]
-            #     tensor = tf.cast(sample, tf.float32) / INTSIZE
-            #     tensor = tf.squeeze(tensor)
-            #     spectrogram = tfio.audio.spectrogram(
-            #         tensor, nfft=512, window=window, stride=stride)
-            #     plt.figure()
-            #     plt.imshow(tf.math.log(spectrogram).numpy().T)
-            #     plt.show()
 
             save_loc = os.path.join(save_dir, split, species)
             for i, (t1, t2) in enumerate(segments_to_save):
