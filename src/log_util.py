@@ -26,13 +26,15 @@ def plot_to_image(figure):
 
 def make_log_confusion_matrix_fn(
         model, file_writer_cm, file_writer_wrong, test_ds, label_names,
-        preproc_layer, include_ambient_noise=True):
+        preproc_layer, include_ambient_noise=True, multitask=False):
 
     def log_confusion_matrix(epoch, logs):
         # Use the model to predict the values from the validation dataset.
         y_pred = model.predict(test_ds)
+        if multitask:
+            y_pred = y_pred[0]
         y_pred = tf.argmax(y_pred, axis=1)
-        y_true = tf.concat(list(test_ds.map(lambda s, lab: lab)), axis=0)
+        y_true = tf.concat(list(test_ds.map(lambda s, lab: lab['species'] if multitask else lab)), axis=0)
 
         # Log incorrectly labelled examples as an image summary
         wrong = tf.where(
@@ -42,6 +44,16 @@ def make_log_confusion_matrix_fn(
         ).numpy()
 
         with file_writer_wrong.as_default():
+            y_labels = y_true.numpy()
+            sample_ixs = list(np.random.choice(np.arange(len(y_labels)), size=36, replace=False))
+            raw_images = [
+                np.transpose(spec, [1, 0, 2])[::-1, :, :]
+                for i, spec in enumerate(test_ds.map(lambda x, l: x).unbatch().as_numpy_iterator())
+                if i in sample_ixs]
+            sample_labels = [label_names[l] for i, l in enumerate(y_labels) if i in sample_ixs]
+            fig = image_grid(images=raw_images, labels=sample_labels)
+            input_sample = plot_to_image(fig)
+            tf.summary.image('sample/input', input_sample, step=epoch)
             for label, species in enumerate(label_names):
                 species_examples = tf.where(
                     tf.equal(tf.cast(y_true, tf.int32), label)
@@ -50,7 +62,7 @@ def make_log_confusion_matrix_fn(
                 to_use = set(species_ixs.tolist())
                 predicted = [p for p in y_pred.numpy()[species_ixs]]
                 wrong_img = [
-                    np.transpose(spec, [1,0,2])[::-1, :, :]
+                    np.transpose(spec, [1, 0, 2])[::-1, :, :]
                     for i, spec in enumerate(
                         test_ds.map(
                             lambda x, l: preproc_layer(x)

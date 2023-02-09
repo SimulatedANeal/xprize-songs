@@ -71,7 +71,7 @@ def image_grid(images, labels):
     """Return a 5x5 grid of the MNIST images as a matplotlib figure."""
     # Create a figure to contain the plot.
     square = int(np.ceil(np.sqrt(len(images))))
-    figure = plt.figure(figsize=(20,20))
+    figure = plt.figure(figsize=(20, 20))
     for i, image in enumerate(images):
         # Start next subplot.
         plt.subplot(square, square, i + 1, title=labels[i])

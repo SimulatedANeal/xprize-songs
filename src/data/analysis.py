@@ -70,6 +70,7 @@ def get_total_time(label_list):
     time = sum(t2 - t1 for (t1, t2), _ in label_list)
     return time
 
+
 def main():
     args = get_args()
     root_dir = args.labels_directory
