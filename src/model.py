@@ -42,7 +42,7 @@ def build_basic_model(train_ds, num_labels, input_size, conv_layers=((32, 3), (6
     model.compile(
         optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, name='species_loss'),
-        metrics=[tf.keras.metrics.Accuracy(name='species_accuracy')],)
+        metrics=[tf.keras.metrics.CategoricalAccuracy(name='species_accuracy')],)
 
     return model, preprocessing
 
