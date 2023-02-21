@@ -23,6 +23,14 @@ Times are in seconds.
 Filenames (minus extension) match the filename of its corresponding audio file
 in the corresponding species directory of the same name.
 
+# Test files
+Test files for each species are specified in *split.py*
+
+Test files were chosen based on a few criteria (in order of importance):
+* Total example time should be ~10% of total data
+* Some amount of noise that may better simulate data from contest environment
+* A mixture of calls and ambient noise (silence) for better precision / recall representation.
+
 # Notes
 ## General
 * Time ranges for labelled ECHEMES might overlap with CALLS, i.e. they get counted twice.
