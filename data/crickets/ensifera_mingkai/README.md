@@ -11,6 +11,8 @@
 
 5 = noise
 
+6 = unknown other species
+
 In some cases where I could more specifically identify the noise, I use a text label, e.g. "bird" or "phone"
 
 # Label Format
