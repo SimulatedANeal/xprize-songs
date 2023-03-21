@@ -7,6 +7,7 @@ class Label(enum.Enum):
     TRILL = 3
     CALL = 4
     NOISE = 5
+    OTHER_SPECIES = 6
 
     @classmethod
     def valid(cls):

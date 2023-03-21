@@ -19,4 +19,5 @@ test_files = {
     "Polionemobius taprobanensis": ['20200526_202111', '20200526_204420', '20200526_000245'],
     "Singapuriola separata": ["ZOOM0039"],
     "Svistella chekjawa": ["20200629_213948", "20200629_203650"],
+    "Cardiodactylus singapura": ["SMA05089_20221226_072410"],
 }
