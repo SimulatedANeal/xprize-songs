@@ -20,10 +20,10 @@ def load_and_tabulate_data(root_dir, species_list, save_file='table.txt'):
     header = ["Species", "# Labelled Audio Files"]
     for label in Label.valid():
         header.extend([
-            f"# {label.name} Examples",
-            f"{label.name} Max. length (ms)",
-            f"{label.name} Min. length (ms)",
-            f"{label.name} Mean length (ms)"])
+            f"# {label} Examples",
+            f"{label} Max. length (ms)",
+            f"{label} Min. length (ms)",
+            f"{label} Mean length (ms)"])
 
     all_labels = dict()
     lengths = defaultdict(list)
@@ -94,16 +94,16 @@ def main():
         for fn, time in sorted(total_time.items(), key=lambda x: x[1], reverse=True):
             print(f"\t{fn}: {time} ({time / total * 100}%)")
         print(f"Train: {split_time['train'] / total}, Test: {split_time['test'] / total}")
-    # plot_example_stats(
-    #     all_species_dict=all_labels,
-    #     title='Example Count by Species and Type',
-    #     bar_fn=len,
-    #     y_label='Count')
-    # plot_example_stats(
-    #     all_species_dict=all_labels,
-    #     title='Total Example Time by Species and Type',
-    #     bar_fn=get_total_time,
-    #     y_label="Time (s)")
+    example_stats(
+        all_species_dict=all_labels,
+        title='Example Count by Species and Type',
+        bar_fn=len,
+        y_label='Count')
+    example_stats(
+        all_species_dict=all_labels,
+        title='Total Example Time by Species and Type',
+        bar_fn=get_total_time,
+        y_label="Time (s)")
 
 
 def get_args():

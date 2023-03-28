@@ -23,7 +23,7 @@ def load_label_file(filepath):
                     f"Unexpected label '{raw_label}' in file {filepath}. "
                     f"Treating as {Label.NOISE}.")
                 label = Label.NOISE
-            label_dict[label].append(((float(start), float(stop)), filename))
+            label_dict[label.name].append(((float(start), float(stop)), filename))
         # # Detect singletons
         # for k, v in label_dict.items():
         #     if len(v) == 1:

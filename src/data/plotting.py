@@ -40,9 +40,10 @@ def example_stats(all_species_dict, title, bar_fn=len, y_label='Count'):
     width = 0.35  # the width of the bars
     total_height = [0] * len(labels)
     fig, ax = plt.subplots()
-    for i, l in enumerate(Label.non_noise()):
-        xx = [bar_fn(v[l]) for k,v in all_species_dict.items()]
-        ax.bar(labels, xx, width, label=l.name, bottom=total_height)
+    for l in Label.non_noise():
+        xx = [bar_fn([row for row in call_dict[l]])
+              for species, call_dict in all_species_dict.items()]
+        ax.bar(labels, xx, width, label=l, bottom=total_height)
         total_height = [x + h for (x, h) in zip(xx, total_height)]
     ax.set_ylabel(y_label)
     ax.set_title(title)

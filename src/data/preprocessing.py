@@ -53,8 +53,9 @@ def main():
             for (t1, t2), filename in labels[calltype]:
                 filename = filename.rstrip('.txt')
                 all_sound[filename].append((t1, t2))
-                if not any(overlapping(t1, t2, t3, t4) for (t3, t4) in file_labels[filename]):
-                    file_labels[filename].append((t1, t2))
+                if calltype != Label.OTHER_SPECIES.name:
+                    if not any(overlapping(t1, t2, t3, t4) for (t3, t4) in file_labels[filename]):
+                        file_labels[filename].append((t1, t2))
 
         for filename, times in file_labels.items():
             split = 'test' if filename in test_files[species] else 'train'
@@ -64,8 +65,12 @@ def main():
                 audio_files.extend(glob(os.path.join(audio_dir, species, f'{filename}.{ext}')))
             audio_file = audio_files[0]  # Should be only one
             audio, sample_rate, length_s = read_wav(audio_file)
-            print(sample_rate, length_s, audio)
-
+            # try:
+            #     audio, sample_rate, length_s = read_wav(audio_file)
+            # except Exception:
+            #     print(audio_file)
+            # else:
+            #     print(sample_rate, length_s, audio)
             # Pad or split to correct segment length
             segments_to_save = []
             for t1, t2 in times:
@@ -150,7 +155,7 @@ def get_args():
         "--directory-save", "-s", type=str, required=True,
         help="Directory where segmented audio examples will be saved.")
     parser.add_argument(
-        "--window-size-ms", "-w", type=int, default=256,
+        "--window-size-ms", "-w", type=int, default=250,
         help="Audio segment window size in ms")
     args = parser.parse_args()
     return args

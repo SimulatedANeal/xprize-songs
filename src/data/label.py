@@ -1,6 +1,7 @@
-import enum
+from enum import Enum, unique
 
-class Label(enum.Enum):
+@unique
+class Label(Enum):
     AMBIENT = 0
     SYLLABLE = 1
     ECHEME = 2
@@ -11,8 +12,8 @@ class Label(enum.Enum):
 
     @classmethod
     def valid(cls):
-        return  cls.SYLLABLE, cls.ECHEME, cls.TRILL, cls.CALL, cls.NOISE
+        return {cls.SYLLABLE.name, cls.ECHEME.name, cls.TRILL.name, cls.CALL.name, cls.NOISE.name}
 
     @classmethod
     def non_noise(cls):
-        return cls.SYLLABLE, cls.ECHEME, cls.TRILL, cls.CALL
+        return {cls.SYLLABLE.name, cls.ECHEME.name, cls.TRILL.name, cls.CALL.name, cls.OTHER_SPECIES.name}
