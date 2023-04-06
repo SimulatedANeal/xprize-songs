@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 from glob import glob
 
+import librosa
 import tensorflow as tf
 
 from label import Label
@@ -41,7 +42,7 @@ def load_labels(root_dir, species):
     return species_labels, label_files
 
 
-def read_wav(filepath):
+def read_wav_tf(filepath):
     file_contents = tf.io.read_file(filepath)
     audio, sample_rate = tf.audio.decode_wav(file_contents, desired_channels=1)
     sample_rate = tf.cast(sample_rate, dtype=tf.int32)
@@ -49,9 +50,10 @@ def read_wav(filepath):
     return audio, sample_rate, length_s
 
 
-def save_wav_slice(wav, sample_rate, start_s, stop_s, filename):
-    rate = sample_rate.numpy()
-    ix1, ix2 = int(start_s * rate), int(stop_s * rate)
-    sample = wav[ix1:ix2]
-    encoded = tf.audio.encode_wav(sample, sample_rate=sample_rate)
-    tf.io.write_file(filename, encoded)
+def read_wav_librosa(filepath, resample_rate):
+    y, s = librosa.load(filepath, sr=resample_rate)
+    audio = tf.constant(y, dtype=tf.float32)
+    audio = tf.expand_dims(audio, axis=-1)
+    sample_rate = tf.constant(s, dtype=tf.int32)
+    length_s = audio.shape[0] / sample_rate.numpy()
+    return audio, sample_rate, length_s

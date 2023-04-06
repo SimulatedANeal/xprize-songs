@@ -2,12 +2,16 @@ import argparse
 import os
 import pathlib
 
-import tensorflow_io as tfio
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 from log_util import make_log_confusion_matrix_fn
 from model import build_basic_model, build_multitask_model
+from src.data.transform import get_spectrogram_fn
+from src.data.datasets import audio_dataset_from_directory
+from src.data import plotting
+
 
 MS = 1000
 EPOCHS = 10
@@ -27,40 +31,30 @@ def squeeze(audio, labels):
 def convert_to_multitask(ds, ix_ambient):
     return ds.map(
         map_func=lambda spec, label: (spec, {
-            "species": label,
-            "call": tf.where(tf.equal(label, ix_ambient), 0, 1)}),
+            "species": label[:, :ix_ambient],
+            "call": tf.where(tf.equal(label[:, ix_ambient], 1), 0, 1)}),
         num_parallel_calls=tf.data.AUTOTUNE)
 
 
-def get_spectrogram(waveform, sample_rate, nfft):
-    # Convert the waveform to a spectrogram via a STFT.
-    window = int(sample_rate * 2 / MS)
-    stride = int(window / 2)
-    spectrogram = tf.signal.stft(waveform, fft_length=nfft, frame_length=window, frame_step=stride)
-    # Obtain the magnitude of the STFT.
-    spectrogram = tf.abs(spectrogram)
-    # Add a `channels` dimension
-    spectrogram = spectrogram[..., tf.newaxis]
-    return spectrogram
-
-
-def build_datasets(directory, sample_rate, nfft):
+def build_datasets(directory, nfft, sample_rate=None):
     print(f"Using sample rate: {sample_rate}")
     directory_train = pathlib.Path(os.path.join(directory, 'train'))
     directory_test = pathlib.Path(os.path.join(directory, 'test'))
     print("Loading training data")
-    train_ds, val_ds = tf.keras.utils.audio_dataset_from_directory(
+    train_ds, val_ds = audio_dataset_from_directory(
         directory=directory_train,
         batch_size=BATCH_SIZE,
         validation_split=0.2,
-        sampling_rate=sample_rate,
+        label_mode='categorical',
+        # sampling_rate=sample_rate,
         seed=seed,
         subset='both')
     print("Loading test data")
-    test_ds = tf.keras.utils.audio_dataset_from_directory(
+    test_ds = audio_dataset_from_directory(
         directory=directory_test,
         batch_size=BATCH_SIZE,
-        sampling_rate=sample_rate,
+        label_mode='categorical',
+        # sampling_rate=sample_rate,
         seed=seed)
     label_names = list(train_ds.class_names)
     train_ds = train_ds.map(squeeze, tf.data.AUTOTUNE)
@@ -68,9 +62,11 @@ def build_datasets(directory, sample_rate, nfft):
     test_ds = test_ds.map(squeeze, tf.data.AUTOTUNE)
     print("label names:", label_names)
 
+    spectro_fn = get_spectrogram_fn(sample_rate, nfft, window_ms=2, stride_ms=1)
+
     def make_spec_ds(ds):
         return ds.map(
-            map_func=lambda audio, label: (get_spectrogram(audio, sample_rate, nfft), label),
+            map_func=lambda audio, label: (spectro_fn(audio), label),
             num_parallel_calls=tf.data.AUTOTUNE)
 
     train_ds = make_spec_ds(train_ds)
@@ -88,7 +84,7 @@ def train_and_evaluate(
         sample_rate, nfft, input_size,
         hidden_layers, convolutions,
         multitask):
-    ds_train, ds_val, ds_test, labels = build_datasets(data_dir, sample_rate, nfft)
+    ds_train, ds_val, ds_test, labels = build_datasets(data_dir, nfft, sample_rate)
     num_labels = len(labels)
 
     convlayersname = [f'{f}f{s}' for f, s in convolutions]
@@ -134,7 +130,6 @@ def train_and_evaluate(
                     file_writer_wrong=tf.summary.create_file_writer(os.path.join(log_dir, 'image', 'missed')),
                     test_ds=ds_test,
                     label_names=labels,
-                    include_ambient_noise=True,
                     preproc_layer=preprocessing_layer,
                     multitask=multitask))])
 
@@ -153,9 +148,30 @@ def train_and_evaluate(
 def main():
     args = get_args()
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+    # # Code for quickly viewing an exacmple batch of spectrograms
+    # ds_train, ds_val, ds_test, labels = build_datasets(
+    #     directory=args.directory_dataset,
+    #     nfft=512,
+    #     sample_rate=256000,
+    # )
+    # for example_spectrograms, example_spect_labels in ds_train.take(1):
+    #     break
+    # rows = 3
+    # cols = 3
+    # n = rows * cols
+    # fig, axes = plt.subplots(rows, cols, figsize=(16, 9))
+    # for i in range(n):
+    #     r = i // cols
+    #     c = i % cols
+    #     ax = axes[r][c]
+    #     plotting.spectrogram(example_spectrograms[i].numpy(), ax)
+    #     ax.set_title(labels[example_spect_labels[i].numpy()])
+    # plt.show()
+
     # Grid Search
-    for sr in (128000,):
-        for nfft in (512,):
+    for sr in (256000,):
+        for nfft in (1024,):
             for img_size in (64, 128):
                 for mt in (True, False):
                     for conv in [

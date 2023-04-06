@@ -2,7 +2,7 @@
 Data and code for XPrize animal song identification.
 
 ## Code
-**Python Version 3.9.16**
+**Python Version 3.10.9**
 
 Install the requirements in a virtual environment.
 ```bash

@@ -38,10 +38,9 @@ def build_basic_model(train_ds, num_labels, input_size, conv_layers=((32, 3), (6
         model.add(layers.Dropout(0.5))
     model.add(layers.Dense(num_labels))
     model.summary()
-
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, name='species_loss'),
+        optimizer=tf.keras.optimizers.legacy.Adam(),
+        loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True, name='species_loss'),
         metrics=[tf.keras.metrics.CategoricalAccuracy(name='species_accuracy')],)
 
     return model, preprocessing
@@ -61,16 +60,16 @@ def build_multitask_model(train_ds, num_labels, input_size, conv_layers=((32, 3)
         x = layers.Dense(hsize, activation='relu')(x)
         x = layers.Dropout(0.5)(x)
     embedding = x
-    species_pred = layers.Dense(num_labels, name='species')(embedding)
+    species_pred = layers.Dense(num_labels - 1, name='species')(embedding)
     call_pred = layers.Dense(1, activation='sigmoid', name='call')(embedding)
     model = tf.keras.Model(inputs=spectrogram, outputs=[species_pred, call_pred])
     model.summary()
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-5),
         loss={
             "call": tf.keras.losses.BinaryCrossentropy(),
-            "species": tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            "species": tf.keras.losses.CategoricalCrossentropy(from_logits=True),
         },
         metrics={
             "species": ["accuracy"],

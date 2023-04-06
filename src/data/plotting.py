@@ -21,13 +21,15 @@ def spectrogram(spectrogram, ax):
     ax.pcolormesh(X, Y, log_spec)
 
 
-def waveform_and_spectrogram(waveform, spectrogram_fn, label=None):
+def waveform_and_spectrogram(waveform, spectrogram_fn, label=None, show_shape=False):
     fig, axes = plt.subplots(2, figsize=(12, 8))
     timescale = np.arange(waveform.shape[0])
-    axes[0].plot(timescale, waveform.numpy())
+    axes[0].plot(timescale, waveform)
     axes[0].set_title('Waveform')
 
     gram = spectrogram_fn(waveform)
+    if show_shape:
+        print(gram.shape)
     spectrogram(gram.numpy(), axes[1])
     axes[1].set_title('Spectrogram')
     if label:
