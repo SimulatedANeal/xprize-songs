@@ -2,7 +2,6 @@ import argparse
 import gc
 import os
 from collections import defaultdict
-from glob import glob
 
 import numpy as np
 import tensorflow as tf
@@ -10,9 +9,7 @@ from tqdm import tqdm
 
 from data.crickets.ensifera_mingkai.split import test_files
 from label import Label
-from myio import load_labels, read_wav_tf, read_wav_librosa
-from plotting import waveform_and_spectrogram
-from transform import get_spectrogram_fn
+from myio import load_labels, get_wav_file, list_audio_files
 from util import get_species_list
 
 
@@ -51,25 +48,6 @@ def get_sounds_labels(labels_dir, species):
                 if not any(overlapping(t1, t2, t3, t4) for (t3, t4) in file_labels[filename]):
                     file_labels[filename].append((t1, t2))
     return all_sound, file_labels
-
-
-def get_wav_file(filepath, resample_rate=None):
-    # print(f"File: {filename}, split: {split}")
-    audio_files = []
-    for ext in ('wav', 'WAV'):
-        audio_files.extend(glob(f"{filepath}.{ext}"))
-    audio_file = audio_files[0]  # Should be only one
-    if resample_rate:
-        audio, sample_rate, length_s = read_wav_librosa(audio_file, resample_rate)
-    else:
-        audio, sample_rate, length_s = read_wav_tf(audio_file)
-    # try:
-    #     audio, sample_rate, length_s = read_wav(audio_file)
-    # except Exception:
-    #     print(audio_file)
-    # else:
-    #     print(sample_rate, length_s, audio)
-    return audio, sample_rate, length_s
 
 
 def find_ambient_noise(sounds, segment_size_s, end_s):
@@ -148,9 +126,13 @@ def main():
         all_sound, file_labels = get_sounds_labels(labels_dir, species)
         for filename, times in tqdm(file_labels.items(), total=len(file_labels)):
             split = 'test' if filename in test_files[species] else 'train'
-            filepath = os.path.join(audio_dir, species, filename)
+            valid_file = list_audio_files(
+                directory=os.path.join(audio_dir, species),
+                filename=filename,
+                extension=('wav', 'WAV'))[0]  # Should be just one
             audio, sample_rate, length_s = get_wav_file(
-                filepath, resample_rate=args.resample_to_hz)
+                filepath=valid_file,
+                resample_rate=args.resample_to_hz)
             # example_segment = audio[:int(segment_size_s * sample_rate.numpy())]
             # print(example_segment)
             # waveform_and_spectrogram(example_segment, spectro_fn, show_shape=True)
@@ -195,10 +177,10 @@ def get_args():
         "--directory-save", "-s", type=str, required=True,
         help="Directory where segmented audio examples will be saved.")
     parser.add_argument(
-        "--window-size-ms", "-w", type=int, default=250,
+        "--window-size-ms", "-w", type=int, default=512,
         help="Audio segment window size in ms")
     parser.add_argument(
-        "--resample-to-hz", "-r", type=int, default=None,
+        "--resample-to-hz", "-r", type=int, default=256000,
         help="Resample audio to the specified frequency (hz)."
     )
     args = parser.parse_args()

@@ -1,21 +1,31 @@
 import argparse
 import os
 import pathlib
+import pickle
 
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+# from matplotlib import pyplot as plt
 
-from log_util import make_log_confusion_matrix_fn
-from model import build_basic_model, build_multitask_model
+# from log_util import make_log_confusion_matrix_fn
+from model import build_model, save_model
+# from src.data import plotting
 from src.data.transform import get_spectrogram_fn
 from src.data.datasets import audio_dataset_from_directory
-from src.data import plotting
 
 
-MS = 1000
-EPOCHS = 10
+# Training parameters
+EPOCHS = 15
 BATCH_SIZE = 64
+# Spectrogram parameters
+NFFT = 1024
+FFT_WINDOW_MS = 2
+FFT_WINDOW_STRIDE_MS = 1
+# Model definition
+IMG_SIZE = 96
+CONVOLUTIONS = ((16, 3), (32, 3), (64, 3))
+DENSE = (50,)
+SPECIES_LAYERS = (40,)
 
 # Set the seed value for experiment reproducibility.
 seed = 42
@@ -29,6 +39,7 @@ def squeeze(audio, labels):
 
 
 def convert_to_multitask(ds, ix_ambient):
+    # TODO: Might buggy if 'ambient' is not last label
     return ds.map(
         map_func=lambda spec, label: (spec, {
             "species": label[:, :ix_ambient],
@@ -62,7 +73,10 @@ def build_datasets(directory, nfft, sample_rate=None):
     test_ds = test_ds.map(squeeze, tf.data.AUTOTUNE)
     print("label names:", label_names)
 
-    spectro_fn = get_spectrogram_fn(sample_rate, nfft, window_ms=2, stride_ms=1)
+    spectro_fn = get_spectrogram_fn(
+        sample_rate, nfft,
+        window_ms=FFT_WINDOW_MS,
+        stride_ms=FFT_WINDOW_STRIDE_MS)
 
     def make_spec_ds(ds):
         return ds.map(
@@ -72,67 +86,73 @@ def build_datasets(directory, nfft, sample_rate=None):
     train_ds = make_spec_ds(train_ds)
     val_ds = make_spec_ds(val_ds)
     test_ds = make_spec_ds(test_ds)
+
     # Cache and shuffle (train)
     train_ds = train_ds.cache().shuffle(BATCH_SIZE * 8).prefetch(tf.data.AUTOTUNE)
     val_ds = val_ds.cache().prefetch(tf.data.AUTOTUNE)
     test_ds = test_ds.cache().prefetch(tf.data.AUTOTUNE)
-    return train_ds, val_ds, test_ds, label_names
+
+    label_ambient_ix = label_names.index('ambient')
+    train_ds = convert_to_multitask(train_ds, label_ambient_ix)
+    val_ds = convert_to_multitask(val_ds, label_ambient_ix)
+    test_ds = convert_to_multitask(test_ds, label_ambient_ix)
+
+    return train_ds, val_ds, test_ds, label_names[:-1]
 
 
 def train_and_evaluate(
         data_dir, log_dir, save_dir,
-        sample_rate, nfft, input_size,
-        hidden_layers, convolutions,
-        multitask):
-    ds_train, ds_val, ds_test, labels = build_datasets(data_dir, nfft, sample_rate)
-    num_labels = len(labels)
+        input_size, convolutions, hidden_layers, species_layers):
 
+    window, sample_rate = data_dir.split('/')[-1].split('_')
+    window_length_ms = int(window[:-2])
+    sample_rate = int(sample_rate[:-3]) * 1000
+    ds_train, ds_val, ds_test, labels = build_datasets(data_dir, NFFT, sample_rate)
+
+    # Code for quickly viewing an example batch of spectrograms
+    for example_spectrograms, example_spect_labels in ds_train.take(1):
+        print(f"Batched input shape: {example_spectrograms.shape}")
+
+    model_config = dict(
+        sample_rate=sample_rate,
+        window_len_ms=window_length_ms,
+        nfft=NFFT,
+        labels=labels)
     convlayersname = [f'{f}f{s}' for f, s in convolutions]
-    model_name = f"model_{int(sample_rate / 1000)}k" \
-                 f"_{nfft}" \
+    denselayers = list(hidden_layers) + [f"{s}s" for s in species_layers]
+    model_name = f"model_{int(sample_rate / 1000)}khz" \
+                 f"_{NFFT}" \
                  f"_{input_size}x{input_size}" \
                  f"_{'-'.join(convlayersname)}" \
-                 f"_{'-'.join(map(str, hidden_layers))}" \
-                 f"_{num_labels}"
+                 f"_{'-'.join(map(str, denselayers))}" \
+                 f"_{len(labels)}"
 
-    if multitask:
-        label_ambient_ix = labels.index('ambient')
-        ds_train = convert_to_multitask(ds_train, label_ambient_ix)
-        ds_val = convert_to_multitask(ds_val, label_ambient_ix)
-        ds_test = convert_to_multitask(ds_test, label_ambient_ix)
-        model, preprocessing_layer = build_multitask_model(
-            train_ds=ds_train,
-            num_labels=num_labels,
-            input_size=input_size,
-            conv_layers=convolutions,
-            hidden_dense_size=hidden_layers)
-        model_name = f"{model_name}_multitask"
-    else:
-        model, preprocessing_layer = build_basic_model(
-            train_ds=ds_train,
-            num_labels=num_labels,
-            input_size=input_size,
-            conv_layers=convolutions,
-            hidden_dense_size=hidden_layers)
+    model, preprocessing_layer = build_model(
+        train_ds=ds_train,
+        labels=labels,
+        input_size=input_size,
+        sample_rate=sample_rate,
+        nfft=NFFT,
+        fft_window_ms=FFT_WINDOW_MS,
+        fft_window_stride_ms=FFT_WINDOW_STRIDE_MS,
+        conv_layers=convolutions,
+        hidden_dense_size=hidden_layers,
+        species_hidden_layers=species_layers)
     log_dir = os.path.join(log_dir, model_name)
 
+    print("Training model...")
     history = model.fit(
         ds_train,
         validation_data=ds_val,
         epochs=EPOCHS,
         callbacks=[
             tf.keras.callbacks.EarlyStopping(verbose=1, patience=2),
-            tf.keras.callbacks.TensorBoard(log_dir=log_dir, write_images=True),
-            tf.keras.callbacks.LambdaCallback(
-                on_epoch_end=make_log_confusion_matrix_fn(
-                    model=model,
-                    file_writer_cm=tf.summary.create_file_writer(os.path.join(log_dir, 'image', 'cm')),
-                    file_writer_wrong=tf.summary.create_file_writer(os.path.join(log_dir, 'image', 'missed')),
-                    test_ds=ds_test,
-                    label_names=labels,
-                    preproc_layer=preprocessing_layer,
-                    multitask=multitask))])
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir, write_images=True)
+        ])
 
+    model.summary()
+
+    print("Evaluating model on test set...")
     model.evaluate(
         ds_test,
         return_dict=True,
@@ -140,59 +160,39 @@ def train_and_evaluate(
             tf.keras.callbacks.TensorBoard(log_dir=log_dir)
         ])
 
+    print("Example prediction step...")
+    for spectrograms, spect_labels in ds_test.take(5):
+        print("Start batch")
+        embeddings = model.embed(spectrograms)
+        print("Embeddings: ", embeddings)
+        call_pred = model.get_call_probability(embeddings)
+        print("Call probability: ", call_pred)
+        call_indices = tf.where(call_pred >= 0.5)[:, 0]
+        call_indices = tf.expand_dims(call_indices, axis=1)
+        print("Call indices: ", call_indices)
+        call_embeddings = tf.gather_nd(embeddings, call_indices)
+        species_pred = model.predict_species(call_embeddings)
+        print("Species probability: ", species_pred)
+        print("End batch\n")
+
     if save_dir:
         model_dir = os.path.join(save_dir, model_name)
-        model.save(model_dir)
+        save_model(model, model_config, model_dir)
+        with open(os.path.join(model_dir, 'history.pkl'), 'wb') as f:
+            pickle.dump(history, f)
 
 
 def main():
     args = get_args()
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
-
-    # # Code for quickly viewing an exacmple batch of spectrograms
-    # ds_train, ds_val, ds_test, labels = build_datasets(
-    #     directory=args.directory_dataset,
-    #     nfft=512,
-    #     sample_rate=256000,
-    # )
-    # for example_spectrograms, example_spect_labels in ds_train.take(1):
-    #     break
-    # rows = 3
-    # cols = 3
-    # n = rows * cols
-    # fig, axes = plt.subplots(rows, cols, figsize=(16, 9))
-    # for i in range(n):
-    #     r = i // cols
-    #     c = i % cols
-    #     ax = axes[r][c]
-    #     plotting.spectrogram(example_spectrograms[i].numpy(), ax)
-    #     ax.set_title(labels[example_spect_labels[i].numpy()])
-    # plt.show()
-
-    # Grid Search
-    for sr in (256000,):
-        for nfft in (1024,):
-            for img_size in (64, 128):
-                for mt in (True, False):
-                    for conv in [
-                            ((32, 3), (64, 3)),
-                            ((32, 3), (32, 3), (32, 3)),
-                            ((32, 5), (32, 3), (64, 3))]:
-                        for hidden in [
-                                (128,),
-                                (32, 64),
-                                (64, 128),
-                                (32, 64, 64)]:
-                            train_and_evaluate(
-                                data_dir=args.directory_dataset,
-                                log_dir=args.directory_tb_logs,
-                                save_dir=args.directory_model_save,
-                                sample_rate=sr,
-                                nfft=nfft,
-                                input_size=img_size,
-                                hidden_layers=hidden,
-                                convolutions=conv,
-                                multitask=mt)
+    train_and_evaluate(
+        data_dir=args.directory_dataset,
+        log_dir=args.directory_tb_logs,
+        save_dir=args.directory_model_save,
+        input_size=IMG_SIZE,
+        hidden_layers=DENSE,
+        convolutions=CONVOLUTIONS,
+        species_layers=SPECIES_LAYERS)
 
 
 def get_args():

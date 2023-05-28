@@ -17,7 +17,7 @@ test_files = {
     "Gymnogryllus malayanus": ['ZOOM0040'],
     "Hexacentrus unicolor": ['20220217_050641', '20220227_003332', '20220227_001559', '20220220_020307'],
     "Holochlora bilobata": ['20200613_003044'],
-    "Indophisis siamensis": ['20180822_155910'],
+    "Neophisis siamensis": ['20180822_155910'],
     "Kuzicus denticulatus": ['20190927_003733', '20190927_041345'],
     "Lipotactes maculatus": [
         'SMA05027_20230105_230716', 'SMA05027_20230105_230718', '20191206_183007',

@@ -26,17 +26,14 @@ def plot_to_image(figure):
 
 def make_log_confusion_matrix_fn(
         model, file_writer_cm, file_writer_wrong, test_ds, label_names,
-        preproc_layer, multitask=False):
+        preproc_layer):
 
-    if multitask:
-        label_names = label_names[:-1]
-
+    label_names = label_names[:-1]
     def log_confusion_matrix(epoch, logs):
         # Use the model to predict the values from the validation dataset.
         y_pred = model.predict(test_ds)
-        if multitask:
-            y_pred = y_pred[0]
-        y_true = tf.concat(list(test_ds.map(lambda s, lab: lab['species'] if multitask else lab)), axis=0)
+        y_pred = y_pred['species']
+        y_true = tf.concat(list(test_ds.map(lambda s, lab: lab['species'])), axis=0)
         y_pred = tf.argmax(y_pred, axis=1)
         y_true = tf.argmax(y_true, axis=1)
 

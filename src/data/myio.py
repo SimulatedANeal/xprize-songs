@@ -5,7 +5,7 @@ from glob import glob
 import librosa
 import tensorflow as tf
 
-from label import Label
+from src.data.label import Label
 
 
 def load_label_file(filepath):
@@ -40,6 +40,28 @@ def load_labels(root_dir, species):
         for call_type, examples in labels.items():
             species_labels[call_type].extend(examples)
     return species_labels, label_files
+
+
+def list_audio_files(directory, filename=None, extension=('wav', 'WAV')):
+    audio_files = []
+    path = os.path.join(directory, filename if filename else '*')
+    for ext in extension:
+        audio_files.extend(glob(f"{path}.{ext}"))
+    return audio_files
+
+
+def get_wav_file(filepath, resample_rate=None):
+    if resample_rate:
+        audio, sample_rate, length_s = read_wav_librosa(filepath, resample_rate)
+    else:
+        audio, sample_rate, length_s = read_wav_tf(filepath)
+    # try:
+    #     audio, sample_rate, length_s = read_wav(audio_file)
+    # except Exception:
+    #     print(audio_file)
+    # else:
+    #     print(sample_rate, length_s, audio)
+    return audio, sample_rate, length_s
 
 
 def read_wav_tf(filepath):
