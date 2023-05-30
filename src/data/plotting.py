@@ -6,35 +6,18 @@ from matplotlib import pyplot as plt
 from src.data.label import Label
 
 
-def spectrogram(spectrogram, ax):
-    if len(spectrogram.shape) > 2:
-        assert len(spectrogram.shape) == 3
-        spectrogram = np.squeeze(spectrogram, axis=-1)
-    # Convert the frequencies to log scale and transpose, so that the time is
-    # represented on the x-axis (columns).
-    # Add an epsilon to avoid taking a log of zero.
-    log_spec = np.log(spectrogram.T + np.finfo(float).eps)
-    height = log_spec.shape[0]
-    width = log_spec.shape[1]
-    X = np.linspace(0, np.size(spectrogram), num=width, dtype=int)
-    Y = range(height)
-    ax.pcolormesh(X, Y, log_spec)
-
-
-def waveform_and_spectrogram(waveform, spectrogram_fn, label=None, show_shape=False):
-    fig, axes = plt.subplots(2, figsize=(12, 8))
-    timescale = np.arange(waveform.shape[0])
-    axes[0].plot(timescale, waveform)
+def waveform_and_spectrogram(signal_data, sample_rate, nfft=1024, size=(6, 4)):
+    fig, axes = plt.subplots(2, figsize=size)
+    axes[0].plot(signal_data)
     axes[0].set_title('Waveform')
-
-    gram = spectrogram_fn(waveform)
-    if show_shape:
-        print(gram.shape)
-    spectrogram(gram.numpy(), axes[1])
+    axes[0].set_ylabel('Amplitude')
+    axes[0].set_xlabel('Samples')
+    axes[1].specgram(signal_data, Fs=sample_rate, NFFT=nfft)
     axes[1].set_title('Spectrogram')
-    if label:
-        plt.suptitle(label.title())
-    plt.show()
+    axes[1].set_ylabel('Frequency')
+    axes[1].set_xlabel('Time (s)')
+    fig.tight_layout()
+    return fig
 
 
 def example_stats(all_species_dict, title, bar_fn=len, y_label='Count'):

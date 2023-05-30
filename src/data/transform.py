@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 
 from src.data.sample import AudioSample
@@ -36,22 +37,19 @@ def window(waveform, sample_rate, window_size_ms=500, stride_ms=100):
     return windows
 
 
-def window_audio_file(waveform, sample_rate, parent_filepath, window_size_ms=500, stride_ms=100):
-    samples_per_window = int(sample_rate * window_size_ms / MS)
-    stride = int(sample_rate * stride_ms / MS)
+def window_audio_file(parent_filepath, audio_length_s, window_size_ms=500, stride_ms=100):
+    stride_s = stride_ms / MS
+    window_size_s = window_size_ms / MS
     windows = [
         AudioSample(
             filepath=parent_filepath,
-            raw_audio_data=waveform[ix:ix + samples_per_window],
-            time_start_s=(ix / sample_rate).numpy(),
-            time_end_s=((ix + samples_per_window) / sample_rate).numpy())
-        for ix in range(0, len(waveform) - samples_per_window, stride)]
-    if len(waveform) % samples_per_window:  # not evenly divisible
-        # Add last window to get final bit of audio
+            time_start_s=timestamp,
+            time_end_s=timestamp + window_size_s)
+        for timestamp in np.arange(0., audio_length_s - window_size_s, stride_s)]
+    if not (audio_length_s / window_size_s).is_integer():
         windows.append(
             AudioSample(
                 filepath=parent_filepath,
-                raw_audio_data=waveform[len(waveform) - samples_per_window:],
-                time_start_s=((len(waveform) - samples_per_window) / sample_rate).numpy(),
-                time_end_s=(len(waveform) / sample_rate).numpy()))
+                time_start_s=audio_length_s - window_size_s,
+                time_end_s=audio_length_s))
     return windows

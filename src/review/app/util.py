@@ -1,8 +1,33 @@
 from functools import lru_cache
 
+import librosa
 import tensorflow as tf
 
-from src.data.myio import get_wav_file
+
+def get_wav_file(filepath, resample_rate=None):
+    if resample_rate:
+        audio, sample_rate, length_s = read_wav_librosa(filepath, resample_rate)
+    else:
+        audio, sample_rate, length_s = read_wav_tf(filepath)
+    return audio, sample_rate, length_s
+
+
+def read_wav_tf(filepath):
+    file_contents = tf.io.read_file(filepath)
+    audio, sample_rate = tf.audio.decode_wav(file_contents, desired_channels=1)
+    sample_rate = tf.cast(sample_rate, dtype=tf.int32)
+    length_s = audio.shape[0] / sample_rate.numpy()
+    return audio, sample_rate, length_s
+
+
+def read_wav_librosa(filepath, resample_rate):
+    y, s = librosa.load(filepath, sr=resample_rate)
+    audio = tf.constant(y, dtype=tf.float32)
+    audio = tf.expand_dims(audio, axis=-1)
+    sample_rate = tf.constant(s, dtype=tf.int32)
+    length_s = audio.shape[0] / sample_rate.numpy()
+    return audio, sample_rate, length_s
+
 
 
 class AudioSample:
