@@ -39,7 +39,7 @@ def export_predictions(delimiter=','):
     return proxy
 
 
-def waveform_and_spectrogram(signal_data, sample_rate=SAMPLE_RATE, nfft=1024, size=(6, 4)):
+def waveform_and_spectrogram(signal_data, sample_rate=SAMPLE_RATE, nfft=1024, size=(6, 6)):
     fig = Figure(figsize=size)
     ax0 = fig.add_subplot(2, 1, 1)
     ax0.plot(signal_data)
@@ -90,20 +90,24 @@ def index():
 @bp.route('/plot/sample/spectrogram/<sample_id>.png')
 @login_required
 def plot_sample_spectrogram(sample_id):
+    w = request.args.get('width', 6, type=int)
+    h = request.args.get('height', 6, type=int)
     sample = Sample.query.get(sample_id)
     data = sample.load_audio(sample_rate=SAMPLE_RATE)
-    fig = waveform_and_spectrogram(signal_data=data, size=(6,6))
+    fig = waveform_and_spectrogram(signal_data=data, size=(w, h))
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
 
 
-@bp.route('/plot/example/spectrogram/<example_id>.png', defaults={'size': (4,4)})
+@bp.route('/plot/example/spectrogram/<example_id>.png')
 @login_required
-def plot_example_spectrogram(example_id, size=(4,4)):
+def plot_example_spectrogram(example_id):
+    w = request.args.get('width', 4, type=int)
+    h = request.args.get('height', 4, type=int)
     ex = Example.query.get(example_id)
     data = ex.load_audio(sample_rate=SAMPLE_RATE)
-    fig = waveform_and_spectrogram(signal_data=data, size=size)
+    fig = waveform_and_spectrogram(signal_data=data, size=(w, h))
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')

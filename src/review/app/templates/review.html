@@ -14,7 +14,7 @@
 
 <table class="table table-hover">
     <tr>
-        <td>
+        <td style="vertical-align: bottom;">
             <h3>Predicted Class: {{ pred.label }}</h3>
             <h4>From Model: {{ pred.ai_detection_method }}</h4>
             <h4>Model positive ID probability: {{ pred.probability }}</h4>
@@ -25,7 +25,7 @@
             </div>
         </td>
         <td>
-            <img src="{{ url_for('main.plot_sample_spectrogram', sample_id=pred.sample.id, size=(6,6)) }}" class="image"/>
+            <img src="{{ url_for('main.plot_sample_spectrogram', sample_id=pred.sample.id, width=6, height=8) }}" class="image"/>
             <p></p>
             <audio controls>
                 <source src="{{ url_for('static', filename='audio/sample_{}.wav'.format(pred.sample.id)) }}" type="audio/wav">
@@ -46,7 +46,7 @@
         <tr>
             {% for item in examples %}
                 <td>
-                    <img src="{{ url_for('main.plot_example_spectrogram', example_id=item.id, size=(4,4)) }}" class="image"/>
+                    <img src="{{ url_for('main.plot_example_spectrogram', example_id=item.id, width=4, height=6) }}" class="image"/>
                     <audio controls>
                         <source src="{{ url_for('static', filename='audio/example_{}.wav'.format(item.id)) }}" type="audio/wav">
                     </audio>
