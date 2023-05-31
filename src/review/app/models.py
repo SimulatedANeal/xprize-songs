@@ -111,8 +111,7 @@ class Sample(db.Model):
         data = sample.get_data(sample_rate)
         encoded = tf.audio.encode_wav(data[..., tf.newaxis], sample_rate=sample_rate)
         path = os.path.join(current_app.static_folder, 'audio', f'sample_{self.id}.wav')
-        if not os.path.exists(path):
-            tf.io.write_file(path, encoded)
+        tf.io.write_file(path, encoded)
         return data.numpy()
 
 
@@ -143,7 +142,6 @@ class Example(db.Model):
         data, sample_rate, length_s = get_wav_file(self.filepath, resample_rate=sample_rate)
         encoded = tf.audio.encode_wav(data, sample_rate=sample_rate)
         path = os.path.join(current_app.static_folder, 'audio', f'example_{self.id}.wav')
-        if not os.path.exists(path):
-            tf.io.write_file(path, encoded)
+        tf.io.write_file(path, encoded)
         return tf.squeeze(data).numpy()
 

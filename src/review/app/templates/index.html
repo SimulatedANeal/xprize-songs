@@ -1,8 +1,58 @@
 {% extends "base.html" %}
 {% import 'bootstrap/wtf.html' as wtf %}
+{% import "_macros.html" as macros %}
 
 {% block app_content %}
     <h1>Hi, {{ current_user.username }}!</h1>
-    Welcome to the SongAssess App by Team Waponi (XPRIZE)!
+    <h2>Welcome to the SongAssess App by (XPRIZE) Team Waponi!</h2>
+    <p>Number of unreviewed predictions: <b>{{ unreviewed }}</b></p>
+    <p>Number of confirmed IDs:
+        <b>{{ nconfirmed }} ({{ nspecies }} unique species)</b>
+    </p>
+
+    <div>
+        <a href="{{ url_for('main.export_confirmed_ids') }}">
+            Export Confirmed IDs
+        </a>
+    </div>
+
+    <div>
+        <h2>Recently Reviewed</h2>
+        <table  class="table">
+            <tr>
+                <th>Prediction ID</th>
+                <th>Status</th>
+                <th>Label</th>
+                <th>Confidence</th>
+                <th>Reviewed By</th>
+                <th>Reviewed On</th>
+            </tr>
+            {% for pred in recently_reviewed.items %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('main.review', prediction_id=pred.id) }}">
+                        {{ pred.id }}
+                    </a>
+                </td>
+                <td>
+                    {% if pred.accepted %}
+                        <p style="color:green">Confirmed</p>
+                    {% else %}
+                        <p style="color:red">Declined</p>
+                    {% endif %}
+                </td>
+                <td>{{ pred.label }}</td>
+                <td>{{ pred.review_confidence_score }}</td>
+                <td>{{ pred.reviewer.username }}</td>
+                <td>{{ pred.reviewed_on }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {{ macros.pagination_helper(
+            endpoint='main.index',
+            pages=recently_reviewed,
+            label='page') }}
+    </div>
 
 {% endblock %}

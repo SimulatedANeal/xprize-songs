@@ -4,6 +4,7 @@
 __pycache__/
 
 instance/
+logs/
 
 .pytest_cache/
 .coverage
@@ -12,3 +13,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+example_*.wav
+sample_*.wav
+app.db

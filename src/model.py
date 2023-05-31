@@ -8,38 +8,6 @@ from tensorflow.keras import layers
 MS = 1000
 
 
-def cross_entropy_f1(y_true, y_pred):
-    """Compute the macro soft F1-score as a cost (average 1 - soft-F1 across all labels).
-    Use probability values instead of binary predictions.
-    This version uses the computation of soft-F1 for both positive and negative class for each label.
-
-    Taken from blog post: https://towardsdatascience.com/the-unknown-benefits-of-using-a-soft-f1-loss-in-classification-systems-753902c0105d
-
-    Args:
-        y (int32 Tensor): targets array of shape (BATCH_SIZE, N_LABELS)
-        y_hat (float32 Tensor): probability matrix from forward propagation of shape (BATCH_SIZE, N_LABELS)
-
-    Returns:
-        cost (scalar Tensor): value of the cost function for the batch
-    """
-    with tf.name_scope("loss_calculation") as loss_scope:
-        with tf.name_scope("MacroF1") as scope:
-            y = tf.cast(y_true, tf.float32)
-            y_hat = tf.cast(y_pred, tf.float32)
-            tp = tf.reduce_sum(y_hat * y, axis=0)
-            fp = tf.reduce_sum(y_hat * (1 - y), axis=0)
-            fn = tf.reduce_sum((1 - y_hat) * y, axis=0)
-            tn = tf.reduce_sum((1 - y_hat) * (1 - y), axis=0)
-            soft_f1_class1 = 2 * tp / (2 * tp + fn + fp + 1e-16)
-            soft_f1_class0 = 2 * tn / (2 * tn + fn + fp + 1e-16)
-            cost_class1 = 1 - soft_f1_class1  # reduce 1 - soft-f1_class1 in order to increase soft-f1 on class 1
-            cost_class0 = 1 - soft_f1_class0  # reduce 1 - soft-f1_class0 in order to increase soft-f1 on class 0
-            cost = 0.5 * (cost_class1 + cost_class0)  # take into account both class 1 and class 0
-            macro_cost = tf.reduce_mean(cost, name='macro_cost')  # average on all labels
-        xentropy = tf.keras.losses.categorical_crossentropy(y_true, y_pred)
-    return macro_cost + xentropy
-
-
 def macro_f1(y, y_hat, thresh=0.5):
     """Compute the macro F1-score on a batch of observations (average F1 across labels)
 
@@ -135,7 +103,7 @@ def build_model(
                 self.species_stack.add(layers.Dropout(0.45))
             self.species_stack.add(layers.Dense(
                 units=len(self._labels),
-                activation='sigmoid',
+                activation='softmax',
                 name='species_id'))
 
         def call(self, inputs, training=None, mask=None):
@@ -214,7 +182,7 @@ def build_model(
     model.compile(
         optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=learning_rate),
         loss={
-            "species": cross_entropy_f1,
+            "species": tf.keras.losses.CategoricalCrossentropy(from_logits=False),
             "call": tf.keras.losses.BinaryCrossentropy(from_logits=False),
         },
         metrics={
@@ -242,10 +210,8 @@ def save_model(model, config, directory):
     model_fp = os.path.join(directory, 'model')
     if not os.path.exists(directory):
         os.makedirs(directory)
-
     with open(config_fp, 'w') as f:
         json.dump(config, f)
-
     model.save(model_fp)
 
 
@@ -256,7 +222,6 @@ def load_model(directory):
         config = json.load(f)
     model = tf.keras.models.load_model(
         model_fp, custom_objects={
-            'cross_entropy_f1': cross_entropy_f1,
             'macro_f1': macro_f1,
         })
     return model, config

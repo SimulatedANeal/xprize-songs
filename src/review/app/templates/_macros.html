@@ -1,0 +1,42 @@
+{% macro pagination_helper(pages, label, endpoint) %}
+    <!-- Pagination Links-->
+    <div class="text-right">
+        {% do kwargs.update({label:pages.prev_num}) %}
+        <a href="{{ url_for(endpoint, **kwargs) }}"
+           class="btn btn-outline-dark
+           {% if pages.page == 1 %}disabled{% endif %}">
+            &laquo;
+        </a>
+        <!-- Loop through the number of pages to display a link for each-->
+        {% for page_num in pages.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+                <!-- Check for the active page and set the link to "Active"-->
+                {% do kwargs.update({label:page_num}) %}
+                {% if pages.page == page_num %}
+                    <a href="{{ url_for(endpoint, **kwargs) }}"
+                       class="btn btn-dark">
+                        {{ page_num }}
+                    </a>
+                {% else %}
+                    <a href="{{ url_for(endpoint, **kwargs) }}"
+                       class="btn btn-outline-dark">
+                        {{ page_num }}
+                    </a>
+                {% endif %}
+            {% else %}
+                ...
+            {% endif %}
+        {% endfor %}
+        {% do kwargs.update({label:pages.next_num}) %}
+        <a href="{{ url_for(endpoint, **kwargs) }}"
+           class="btn btn-outline-dark
+           {% if pages.page == pages.pages %}disabled{% endif %}">
+            &raquo;
+        </a>
+    </div>
+    <p style="text-align:left;">
+        <span style="float:right;">
+            Showing page {{ pages.page }} of {{pages.pages }}
+        </span>
+    </p>
+{% endmacro %}

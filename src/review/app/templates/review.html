@@ -6,6 +6,9 @@
 <h2>Predicted Class: {{ pred.label }}</h2>
 <h3>From Model: {{ pred.ai_detection_method }}</h3>
 <h3>Model positive ID probability: {{ pred.probability }}</h3>
+<p>Source file: {{ pred.sample.filepath }}</p>
+<p>Start time (s): {{ pred.sample.start_time_s }}</p>
+<p>End time (s): {{ pred.sample.stop_time_s }}</p>
 
 {% if pred.reviewed_by  %}
     <p>Last reviewed by {{ pred.reviewer.username }} on {{ pred.reviewed_on }}</p>
@@ -43,6 +46,7 @@
                 <audio controls>
                     <source src="{{ url_for('static', filename='audio/example_{}.wav'.format(item.id)) }}" type="audio/wav">
                 </audio>
+                <p>Source file: {{ item.filepath }}</p>
             </td>
         </tr>
         {% endfor %}

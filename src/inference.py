@@ -11,7 +11,6 @@ import tensorflow as tf
 
 from src.data.sample import AudioSample
 from src.data.myio import list_audio_files
-from src.data.plotting import waveform_and_spectrogram
 from src.data.transform import window_audio_file
 from src.model import load_model
 
@@ -34,7 +33,7 @@ def is_inside(segment1, segment2):
     return segment2[0] <= segment1[0] and segment1[1] <= segment2[1]
 
 
-def merge_predictions(call_probability, species_probability, species_list, call_threshold=0.75):
+def merge_predictions(call_probability, species_probability, species_list, call_threshold=0.5, species_threshold=0.25):
     n_windows = len(call_probability)
 
     # Step 1: Identify potential segments based on the "call" classifier
@@ -60,8 +59,13 @@ def merge_predictions(call_probability, species_probability, species_list, call_
             for j in range(i, end + 1):
                 segment_probs = species_probability[i:j + 1]
                 class_probs = np.mean(segment_probs, axis=0)
-                class_ix = np.argmax(class_probs)
-                candidates[class_ix].append((i, j, class_probs[class_ix]))
+                class_ixs = np.where(class_probs >= species_threshold)[0]
+                if len(class_ixs):
+                    for class_ix in class_ixs:
+                        candidates[class_ix].append((i, j, class_probs[class_ix]))
+                else:
+                    class_ix = np.argmax(class_probs)
+                    candidates[class_ix].append((i, j, class_probs[class_ix]))
     for class_ix, segments in candidates.items():
         maximal = get_non_overlapping_segments(segments)
         for start, end, probability in maximal:
