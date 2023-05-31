@@ -2,10 +2,7 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block app_content %}
-
-<h2>Predicted Class: {{ pred.label }}</h2>
-<h3>From Model: {{ pred.ai_detection_method }}</h3>
-<h3>Model positive ID probability: {{ pred.probability }}</h3>
+<h2>Prediction</h2>
 <p>Source file: {{ pred.sample.filepath }}</p>
 <p>Start time (s): {{ pred.sample.start_time_s }}</p>
 <p>End time (s): {{ pred.sample.stop_time_s }}</p>
@@ -15,42 +12,53 @@
     <p>User confidence (0-100): {{ pred.review_confidence_score }}</p>
 {% endif %}
 
-<div>
-    <img src="{{ url_for('main.plot_sample_spectrogram', sample_id=pred.sample.id) }}" class="image"/>
-    <p></p>
-    <audio controls>
-        <source src="{{ url_for('static', filename='audio/sample_{}.wav'.format(pred.sample.id)) }}" type="audio/wav">
-    </audio>
+<table class="table table-hover">
+    <tr>
+        <td>
+            <h3>Predicted Class: {{ pred.label }}</h3>
+            <h4>From Model: {{ pred.ai_detection_method }}</h4>
+            <h4>Model positive ID probability: {{ pred.probability }}</h4>
 
-    <h2>Review</h2>
-    <div class="row">
-        <div class="col-md-4">
-            {{ wtf.quick_form(form) }}
-        </div>
-    </div>
+            <h2>Review</h2>
+            <div class="col-md-10">
+                {{ wtf.quick_form(form) }}
+            </div>
+        </td>
+        <td>
+            <img src="{{ url_for('main.plot_sample_spectrogram', sample_id=pred.sample.id, size=(6,6)) }}" class="image"/>
+            <p></p>
+            <audio controls>
+                <source src="{{ url_for('static', filename='audio/sample_{}.wav'.format(pred.sample.id)) }}" type="audio/wav">
+            </audio>
+        </td>
+    </tr>
+</table>
 
-</div>
+<br>
 
-<h2>Reference Examples ({{ example_form.species.data }})</h2>
 <div class="row">
+    <h2>Reference Examples ({{ example_form.species.data }})</h2>
     <div class="col-md-4">
         {{ wtf.quick_form(example_form) }}
     </div>
-</div>
 
-<table class="table table-hover">
-    {% for item in examples %}
+    <table class="table table-hover" style="max-wdith 512px">
         <tr>
-            <td>
-                <img src="{{ url_for('main.plot_example_spectrogram', example_id=item.id) }}" class="image"/>
-                <audio controls>
-                    <source src="{{ url_for('static', filename='audio/example_{}.wav'.format(item.id)) }}" type="audio/wav">
-                </audio>
-                <p>Source file: {{ item.filepath }}</p>
-            </td>
+            {% for item in examples %}
+                <td>
+                    <img src="{{ url_for('main.plot_example_spectrogram', example_id=item.id, size=(4,4)) }}" class="image"/>
+                    <audio controls>
+                        <source src="{{ url_for('static', filename='audio/example_{}.wav'.format(item.id)) }}" type="audio/wav">
+                    </audio>
+                </td>
+            {% endfor %}
         </tr>
-        {% endfor %}
-</table>
+    </table>
+    <h3>Example source files:</h3>
+    {% for item in examples %}
+        <p>{{ item.filepath }}</p>
+    {% endfor %}
+</div>
 
 
 {% endblock %}

@@ -54,7 +54,7 @@ def build_example_form(default_species):
             label="Show examples for: ",
             default=default_species,
             choices=get_species_choices())
-        submit_examples = SubmitField("Show examples")
+        submit_examples = SubmitField("Show examples", render_kw={"width": 60})
 
     return ExampleForm()
 

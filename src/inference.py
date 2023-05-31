@@ -110,26 +110,25 @@ def main():
                 audio_length_s=length_s,
                 window_size_ms=config['window_len_ms'],
                 stride_ms=config['window_len_ms'])
-            spectrogram_batch = tf.stack([
-                model.audio_to_spectrogram(w.get_data(sample_rate=sr))
-                for w in windows])
-            embeddings = model.embed(spectrogram_batch)
-            timestamp = datetime.utcnow()
-            call_pred = model.get_call_probability(embeddings).numpy()
-            species_pred = model.predict_species(embeddings).numpy()
-
+            batches_call = []
+            batches_species = []
+            for batch in range(0, len(windows), 1024):
+                spectrogram_batch = tf.ragged.stack([
+                    model.audio_to_spectrogram(w.get_data(sample_rate=sr))
+                    for w in windows[batch:min(batch + 1024, len(windows))]])
+                embeddings = model.embed(spectrogram_batch.to_tensor())
+                batches_call.append(model.get_call_probability(embeddings).numpy())
+                batches_species.append(model.predict_species(embeddings).numpy())
+            call_pred = np.concatenate(batches_call, axis=0)
+            species_pred = np.concatenate(batches_species, axis=0)
             segments = merge_predictions(
                 call_probability=call_pred,
                 species_probability=species_pred,
                 species_list=labels)
+            timestamp = datetime.utcnow()
 
             for segment in segments:
                 new_sample = AudioSample.join(*windows[segment[0]:segment[1] + 1])
-                # waveform_and_spectrogram(
-                #     waveform=new_sample.get_data(sample_rate=sr),
-                #     spectrogram_fn=model.audio_to_spectrogram,
-                #     # label=f"{segment[2]}: {segment[3] * 100:.2f}%"
-                # )
                 writer.writerow([
                     new_sample.filepath,
                     new_sample.start_time,

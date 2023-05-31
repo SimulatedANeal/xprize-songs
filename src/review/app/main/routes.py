@@ -92,18 +92,18 @@ def index():
 def plot_sample_spectrogram(sample_id):
     sample = Sample.query.get(sample_id)
     data = sample.load_audio(sample_rate=SAMPLE_RATE)
-    fig = waveform_and_spectrogram(signal_data=data, size=(8,8))
+    fig = waveform_and_spectrogram(signal_data=data, size=(6,6))
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
 
 
-@bp.route('/plot/example/spectrogram/<example_id>.png')
+@bp.route('/plot/example/spectrogram/<example_id>.png', defaults={'size': (4,4)})
 @login_required
-def plot_example_spectrogram(example_id):
+def plot_example_spectrogram(example_id, size=(4,4)):
     ex = Example.query.get(example_id)
     data = ex.load_audio(sample_rate=SAMPLE_RATE)
-    fig = waveform_and_spectrogram(signal_data=data, size=(6,6))
+    fig = waveform_and_spectrogram(signal_data=data, size=size)
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
     return Response(output.getvalue(), mimetype='image/png')
