@@ -26,15 +26,15 @@ def export_predictions(delimiter=','):
     proxy = io.StringIO()
     writer = csv.writer(proxy, delimiter=delimiter)
     columns = [
-        'source_file', 'snippet_start_s', 'snippet_end_s', 'label',
+        'source_file', 'snippet_start_s', 'snippet_end_s', 'accepted', 'label',
         'ai_detection_method', 'ai_positive_probability', 'inference_timestamp',
         'reviewed_by', 'reviewed_at', 'review_confidence_score']
     writer.writerow(columns)
-    qq = Prediction.query.filter_by(accepted=True).all()
+    qq = Prediction.query.filter(Prediction.reviewed_by.isnot(None)).all()
     for p in qq:
         writer.writerow([
             p.sample.filepath, p.sample.start_time_s, p.sample.stop_time_s,
-            p.label, p.ai_detection_method, p.probability, p.prediction_timestamp,
+            p.accepted, p.label, p.ai_detection_method, p.probability, p.prediction_timestamp,
             p.reviewer.username, p.reviewed_on, p.review_confidence_score])
     return proxy
 
@@ -127,6 +127,7 @@ def get_examples(species, n=3):
 def review(prediction_id=None):
     form = forms.build_review_form()
     if prediction_id is None:
+        # TODO: Pick species with least reviews first
         pred = Prediction.get_random_unreviewed()
         if pred is None:
             flash("No un-reviewed predictions.")

@@ -26,11 +26,11 @@ def add_predictions(filepath, model_name, delimiter=','):
         for row in reader:
             audio_clip = Sample.get_or_create(
                 filepath=row['source'],
-                start_time_s=row['t_start'],
-                end_time_s=row['t_end'],
+                start_time_s=row['snippet_t_start_s'],
+                end_time_s=row['snippet_t_end_s'],
                 user=current_user)
             prediction = Prediction(
-                label=row['species'],
+                label=row['top_species'],
                 probability=row['probability'],
                 ai_detection_method=model_name,
                 prediction_timestamp=parser.parse(row['prediction_timestamp']),

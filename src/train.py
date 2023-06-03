@@ -24,8 +24,8 @@ FFT_WINDOW_STRIDE_MS = 1
 # Model definition
 IMG_SIZE = 96
 CONVOLUTIONS = ((16, 3), (32, 3), (64, 3))
-DENSE = (50,)
-SPECIES_LAYERS = (40,)
+DENSE = (40,)
+SPECIES_LAYERS = (50,)
 
 # Set the seed value for experiment reproducibility.
 seed = 42
@@ -162,18 +162,13 @@ def train_and_evaluate(
 
     print("Example prediction step...")
     for spectrograms, spect_labels in ds_test.take(5):
-        print("Start batch")
         embeddings = model.embed(spectrograms)
-        print("Embeddings: ", embeddings)
         call_pred = model.get_call_probability(embeddings)
-        print("Call probability: ", call_pred)
         call_indices = tf.where(call_pred >= 0.5)[:, 0]
         call_indices = tf.expand_dims(call_indices, axis=1)
-        print("Call indices: ", call_indices)
         call_embeddings = tf.gather_nd(embeddings, call_indices)
         species_pred = model.predict_species(call_embeddings)
-        print("Species probability: ", species_pred)
-        print("End batch\n")
+    print("End batch\n")
 
     if save_dir:
         model_dir = os.path.join(save_dir, model_name)

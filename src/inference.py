@@ -3,7 +3,6 @@ import copy
 import csv
 import json
 import os
-from collections import defaultdict
 from datetime import datetime
 
 import numpy as np
@@ -15,62 +14,24 @@ from src.data.transform import window_audio_file
 from src.model import load_model
 
 
-THRESHOLD = 0.5
-
-
-def get_non_overlapping_segments(sub_segments):
-    non_overlapping_segments = []
-    for segment in sub_segments:
-        is_overlapping = any(
-            segment[:2] != other_segment[:2] and is_inside(segment, other_segment)
-            for other_segment in sub_segments)
-        if not is_overlapping:
-            non_overlapping_segments.append(segment)
-    return non_overlapping_segments
-
-
-def is_inside(segment1, segment2):
-    return segment2[0] <= segment1[0] and segment1[1] <= segment2[1]
-
-
-def merge_predictions(call_probability, species_probability, species_list, call_threshold=0.5, species_threshold=0.25):
+def get_call_snippets(call_probability, call_threshold=0.5):
     n_windows = len(call_probability)
-
-    # Step 1: Identify potential segments based on the "call" classifier
-    segments = []
     current_segment = None
     for i in range(n_windows):
         if call_probability[i] >= call_threshold:
             if current_segment is None:
                 current_segment = [i, i]
+            elif (i - current_segment[0]) > 10:
+                # Cap size of prediction segment
+                yield current_segment
+                current_segment = [i, i]
             else:
                 current_segment[1] = i
         elif current_segment is not None:
-            segments.append(current_segment)
+            yield current_segment
             current_segment = None
     if current_segment is not None:
-        segments.append(current_segment)
-
-    # Step 2: Refine segments based on the "species" classifier
-    refined_segments = []
-    candidates = defaultdict(list)
-    for start, end in segments:
-        for i in range(start, end + 1):
-            for j in range(i, end + 1):
-                segment_probs = species_probability[i:j + 1]
-                class_probs = np.mean(segment_probs, axis=0)
-                class_ixs = np.where(class_probs >= species_threshold)[0]
-                if len(class_ixs):
-                    for class_ix in class_ixs:
-                        candidates[class_ix].append((i, j, class_probs[class_ix]))
-                else:
-                    class_ix = np.argmax(class_probs)
-                    candidates[class_ix].append((i, j, class_probs[class_ix]))
-    for class_ix, segments in candidates.items():
-        maximal = get_non_overlapping_segments(segments)
-        for start, end, probability in maximal:
-            refined_segments.append((start, end, species_list[class_ix], probability))
-    return refined_segments
+        yield current_segment
 
 
 def main():
@@ -100,11 +61,20 @@ def main():
             exit(1)
 
     audio_files = list_audio_files(args.directory_data)
+    field_names = [
+        'source', 'snippet_t_start_s', 'snippet_t_end_s',
+        'top_species', 'probability', 'prediction_timestamp']
+    field_names += labels
     with open(output_file, 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(['source', 't_start', 't_end', 'species', 'probability', 'prediction_timestamp'])
+        writer = csv.DictWriter(f, fieldnames=field_names)
+        writer.writeheader()
         for filepath in audio_files:
-            _, _, length_s = AudioSample.load_audio(filepath, sample_rate=sr)
+            try:
+                _, _, length_s = AudioSample.load_audio(filepath, sample_rate=sr)
+            except EOFError:
+                print(f"WARNING! Skipping corrupted file: {filepath}")
+                continue
+            print(f"Predicting on {filepath}")
             windows = window_audio_file(
                 parent_filepath=filepath,
                 audio_length_s=length_s,
@@ -119,24 +89,26 @@ def main():
                 embeddings = model.embed(spectrogram_batch.to_tensor())
                 batches_call.append(model.get_call_probability(embeddings).numpy())
                 batches_species.append(model.predict_species(embeddings).numpy())
+
+            timestamp = datetime.utcnow()
             call_pred = np.concatenate(batches_call, axis=0)
             species_pred = np.concatenate(batches_species, axis=0)
-            segments = merge_predictions(
-                call_probability=call_pred,
-                species_probability=species_pred,
-                species_list=labels)
-            timestamp = datetime.utcnow()
 
-            for segment in segments:
-                new_sample = AudioSample.join(*windows[segment[0]:segment[1] + 1])
-                writer.writerow([
-                    new_sample.filepath,
-                    new_sample.start_time,
-                    new_sample.end_time,
-                    segment[2],  # species prediction
-                    segment[3],  # prediction probability
-                    timestamp,
-                ])
+            for i, j in get_call_snippets(call_probability=call_pred):
+                new_sample = AudioSample.join(*windows[i:j + 1])
+                segment = species_pred[i:j + 1]
+                class_probs = np.mean(segment, axis=0)
+                predicted_class = np.argmax(class_probs)
+                rowdict = {
+                    'source': new_sample.filepath,
+                    'snippet_t_start_s': new_sample.start_time,
+                    'snippet_t_end_s': new_sample.end_time,
+                    'top_species': labels[predicted_class],
+                    'probability': class_probs[predicted_class],
+                    'prediction_timestamp': timestamp}
+                for class_ix, probability in enumerate(class_probs):
+                    rowdict[labels[class_ix]] = probability
+                writer.writerow(rowdict)
 
 
 def get_args():

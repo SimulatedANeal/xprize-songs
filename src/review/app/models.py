@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from hashlib import md5
 from time import time
+from collections import Counter
 
 import jwt
 import tensorflow as tf
@@ -71,7 +72,13 @@ class Prediction(db.Model):
 
     @classmethod
     def get_random_unreviewed(cls):
-        unreviewed = cls.query.filter_by(reviewed_by=None).order_by(func.random()).first()
+        species = cls.query \
+            .filter_by(reviewed_by=None) \
+            .with_entities(cls.label).distinct() \
+            .order_by(func.random()).first()[0]
+        unreviewed = cls.query \
+            .filter_by(reviewed_by=None, label=species) \
+            .order_by(cls.probability.desc()).first()
         return unreviewed
 
 
