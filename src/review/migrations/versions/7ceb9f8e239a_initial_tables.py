@@ -1,8 +1,8 @@
 """Initial tables
 
-Revision ID: 15dcc97749f1
+Revision ID: 7ceb9f8e239a
 Revises: 
-Create Date: 2023-05-28 19:28:46.443913
+Create Date: 2023-06-05 16:09:04.712795
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '15dcc97749f1'
+revision = '7ceb9f8e239a'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -54,11 +54,13 @@ def upgrade():
     )
     op.create_table('prediction',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('label', sa.String(length=100), nullable=False),
-    sa.Column('probability', sa.Float(), nullable=True),
+    sa.Column('ai_label', sa.String(length=100), nullable=False),
+    sa.Column('ai_call_probability', sa.Float(), nullable=True),
+    sa.Column('ai_species_probability', sa.Float(), nullable=True),
     sa.Column('ai_detection_method', sa.String(length=60), nullable=True),
     sa.Column('prediction_timestamp', sa.DateTime(), nullable=True),
     sa.Column('audio_id', sa.Integer(), nullable=False),
+    sa.Column('human_label', sa.String(length=100), nullable=True),
     sa.Column('reviewed_by', sa.Integer(), nullable=True),
     sa.Column('reviewed_on', sa.DateTime(), nullable=True),
     sa.Column('review_confidence_score', sa.Integer(), nullable=True),
