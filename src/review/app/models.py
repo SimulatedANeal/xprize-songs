@@ -66,7 +66,7 @@ class Prediction(db.Model):
     ai_detection_method = db.Column(db.String(60))
     prediction_timestamp = db.Column (db.DateTime)
     audio_id = db.Column(db.Integer, db.ForeignKey('sample.id'), nullable=False)
-    human_label = db.Column(db.String(100))
+    human_label = db.Column(db.String(100), default=None)
     reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), default=None)
     reviewed_on = db.Column(db.DateTime, default=None)
     review_confidence_score = db.Column(db.Integer, default=None)
