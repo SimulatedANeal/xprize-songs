@@ -62,7 +62,7 @@ def main():
 
     audio_files = list_audio_files(args.directory_data)
     field_names = [
-        'source', 'snippet_t_start_s', 'snippet_t_end_s',
+        'source', 'snippet_t_start_s', 'snippet_t_end_s', 'detection_method',
         'call_probability', 'top_species', 'top_species_probability', 'prediction_timestamp']
     field_names += labels
     with open(output_file, 'w') as f:
