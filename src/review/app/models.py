@@ -60,11 +60,13 @@ def load_user(id):
 
 class Prediction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    label = db.Column(db.String(100), nullable=False)
-    probability = db.Column(db.Float)
+    ai_label = db.Column(db.String(100), nullable=False)
+    ai_call_probability = db.Column(db.Float)
+    ai_species_probability = db.Column(db.Float)
     ai_detection_method = db.Column(db.String(60))
     prediction_timestamp = db.Column (db.DateTime)
     audio_id = db.Column(db.Integer, db.ForeignKey('sample.id'), nullable=False)
+    human_label = db.Column(db.String(100))
     reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), default=None)
     reviewed_on = db.Column(db.DateTime, default=None)
     review_confidence_score = db.Column(db.Integer, default=None)
@@ -74,11 +76,11 @@ class Prediction(db.Model):
     def get_random_unreviewed(cls):
         species = cls.query \
             .filter_by(reviewed_by=None) \
-            .with_entities(cls.label).distinct() \
+            .with_entities(cls.ai_label).distinct() \
             .order_by(func.random()).first()[0]
         unreviewed = cls.query \
-            .filter_by(reviewed_by=None, label=species) \
-            .order_by(cls.probability.desc()).first()
+            .filter_by(reviewed_by=None, ai_label=species) \
+            .order_by(cls.ai_call_probability.desc()).first()
         return unreviewed
 
 

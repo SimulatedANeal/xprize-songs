@@ -12,7 +12,7 @@
 
     <div>
         <a href="{{ url_for('main.export_confirmed_ids') }}">
-            Export Confirmed IDs
+            Export All Reviewed
         </a>
     </div>
 
@@ -22,7 +22,8 @@
             <tr>
                 <th>Prediction ID</th>
                 <th>Status</th>
-                <th>Label</th>
+                <th>AI Label</th>
+                <th>Human label</th>
                 <th>Confidence</th>
                 <th>Reviewed By</th>
                 <th>Reviewed On</th>
@@ -41,7 +42,8 @@
                         <p style="color:red">Declined</p>
                     {% endif %}
                 </td>
-                <td>{{ pred.label }}</td>
+                <td>{{ pred.ai_label }}</td>
+                <td>{{ pred.human_label }}</td>
                 <td>{{ pred.review_confidence_score }}</td>
                 <td>{{ pred.reviewer.username }}</td>
                 <td>{{ pred.reviewed_on }}</td>

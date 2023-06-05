@@ -26,16 +26,18 @@ def export_predictions(delimiter=','):
     proxy = io.StringIO()
     writer = csv.writer(proxy, delimiter=delimiter)
     columns = [
-        'source_file', 'snippet_start_s', 'snippet_end_s', 'accepted', 'label',
-        'ai_detection_method', 'ai_positive_probability', 'inference_timestamp',
-        'reviewed_by', 'reviewed_at', 'review_confidence_score']
+        'source_file', 'snippet_start_s', 'snippet_end_s',
+        'accepted', 'ai_detection_method', 'ai_call_probability',
+        'ai_label', 'ai_species_probability', 'inference_timestamp',
+        'human_label', 'reviewed_by', 'reviewed_at', 'review_confidence_score']
     writer.writerow(columns)
     qq = Prediction.query.filter(Prediction.reviewed_by.isnot(None)).all()
     for p in qq:
         writer.writerow([
             p.sample.filepath, p.sample.start_time_s, p.sample.stop_time_s,
-            p.accepted, p.label, p.ai_detection_method, p.probability, p.prediction_timestamp,
-            p.reviewer.username, p.reviewed_on, p.review_confidence_score])
+            p.accepted, p.ai_detection_method, p.ai_call_probability,
+            p.ai_label,  p.ai_species_probability, p.prediction_timestamp,
+            p.human_label, p.reviewer.username, p.reviewed_on, p.review_confidence_score])
     return proxy
 
 
@@ -67,7 +69,7 @@ def before_request():
 @login_required
 def index():
     confirmed = Prediction.query.filter_by(accepted=True)
-    confirmed_species = confirmed.with_entities(Prediction.label).distinct().count()
+    confirmed_species = confirmed.with_entities(Prediction.human_label).distinct().count()
     num_confirmed = confirmed.count()
     num_unreviewed = Prediction.query.filter_by(reviewed_by=None).count()
 
@@ -154,9 +156,8 @@ def review(prediction_id=None):
         pred.accepted = form.accept.data
         pred.reviewed_by = current_user.id
         pred.reviewed_on = datetime.utcnow()
-        if form.new_label.data != forms.NULL_SPECIES:
-            pred.label = form.new_label.data
-            pred.probability = None
+        hlabel = form.new_label.data
+        pred.human_label = hlabel if hlabel != forms.NULL_SPECIES else pred.ai_label
         pred.review_confidence_score = form.confidence.data
         # TODO: Add to examples?
         db.session.commit()

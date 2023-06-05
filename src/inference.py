@@ -97,14 +97,16 @@ def main():
             for i, j in get_call_snippets(call_probability=call_pred):
                 new_sample = AudioSample.join(*windows[i:j + 1])
                 segment = species_pred[i:j + 1]
+                call_prob = np.mean(call_pred[i:j + 1])
                 class_probs = np.mean(segment, axis=0)
                 predicted_class = np.argmax(class_probs)
                 rowdict = {
                     'source': new_sample.filepath,
                     'snippet_t_start_s': new_sample.start_time,
                     'snippet_t_end_s': new_sample.end_time,
+                    'call_probability': call_prob,
                     'top_species': labels[predicted_class],
-                    'probability': class_probs[predicted_class],
+                    'top_species_probability': class_probs[predicted_class],
                     'prediction_timestamp': timestamp}
                 for class_ix, probability in enumerate(class_probs):
                     rowdict[labels[class_ix]] = probability

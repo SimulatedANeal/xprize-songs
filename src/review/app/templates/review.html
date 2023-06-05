@@ -9,15 +9,17 @@
 
 {% if pred.reviewed_by  %}
     <p>Last reviewed by {{ pred.reviewer.username }} on {{ pred.reviewed_on }}</p>
-    <p>User confidence (0-100): {{ pred.review_confidence_score }}</p>
+    <p>Human label: {{ pred.human_label }}</p>
+    <p>Confidence (0-100): {{ pred.review_confidence_score }}</p>
 {% endif %}
 
 <table class="table table-hover">
     <tr>
         <td style="vertical-align: bottom;">
-            <h3>Predicted Class: {{ pred.label }}</h3>
+            <h3>Call probability: {{ pred.ai_call_probability }}</h3>
+            <h3>Predicted Class: {{ pred.ai_label }}</h3>
+            <h4>Class probability: {{ pred.ai_species_probability }}</h4>
             <h4>From Model: {{ pred.ai_detection_method }}</h4>
-            <h4>Model positive ID probability: {{ pred.probability }}</h4>
 
             <h2>Review</h2>
             <div class="col-md-10">
