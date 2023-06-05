@@ -154,11 +154,16 @@ def review(prediction_id=None):
             example_spec=xform.species.data))
         # TODO: Invalid examples?
     elif 'submit_review' in request.form and form.validate_on_submit():
-        pred.accepted = form.accept.data
+        accepted = form.accept.data
+        pred.accepted = accepted
         pred.reviewed_by = current_user.id
         pred.reviewed_on = datetime.utcnow()
         hlabel = form.new_label.data
-        pred.human_label = hlabel if hlabel != forms.NULL_SPECIES else pred.ai_label
+        if accepted:
+            label = hlabel if hlabel != forms.NULL_SPECIES else pred.ai_label
+        else:
+            label = forms.NULL_SPECIES
+        pred.human_label = label
         pred.review_confidence_score = form.confidence.data
         # TODO: Add to examples?
         db.session.commit()
