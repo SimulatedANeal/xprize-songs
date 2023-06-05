@@ -63,7 +63,7 @@ def main():
     audio_files = list_audio_files(args.directory_data)
     field_names = [
         'source', 'snippet_t_start_s', 'snippet_t_end_s',
-        'top_species', 'probability', 'prediction_timestamp']
+        'call_probability', 'top_species', 'top_species_probability', 'prediction_timestamp']
     field_names += labels
     with open(output_file, 'w') as f:
         writer = csv.DictWriter(f, fieldnames=field_names)
@@ -104,6 +104,7 @@ def main():
                     'source': new_sample.filepath,
                     'snippet_t_start_s': new_sample.start_time,
                     'snippet_t_end_s': new_sample.end_time,
+                    'detection_method': model_name,
                     'call_probability': call_prob,
                     'top_species': labels[predicted_class],
                     'top_species_probability': class_probs[predicted_class],

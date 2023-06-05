@@ -15,7 +15,6 @@ class UploadExamplesForm(FlaskForm):
 
 
 class UploadPredictionsForm(FlaskForm):
-    model_name = StringField("Model Name", validators=[DataRequired(), Length(max=60)])
     file = FileField("Predictions File", validators=[DataRequired()])
     submit = SubmitField('Upload')
 

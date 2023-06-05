@@ -198,7 +198,7 @@ def upload_predictions():
             os.makedirs(current_app.config['UPLOAD_FOLDER'])
         form.file.data.save(filepath)
         flash("Uploading... will redirect to home page when complete.")
-        add_predictions(filepath, model_name=form.model_name.data)
+        add_predictions(filepath)
         return redirect(url_for('main.index'))
     return render_template('upload.html', form=form)
 

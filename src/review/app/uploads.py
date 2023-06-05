@@ -20,7 +20,7 @@ def add_examples(directory):
                     user=current_user)
 
 
-def add_predictions(filepath, model_name, delimiter=','):
+def add_predictions(filepath, delimiter=','):
     with open(filepath, 'r') as f:
         reader = csv.DictReader(f, delimiter=delimiter)
         for row in reader:
@@ -33,7 +33,7 @@ def add_predictions(filepath, model_name, delimiter=','):
                 ai_label=row['top_species'],
                 ai_call_probability=row['call_probability'],
                 ai_species_probability=row['top_species_probability'],
-                ai_detection_method=model_name,
+                ai_detection_method=row['detection_method'],
                 prediction_timestamp=parser.parse(row['prediction_timestamp']),
                 audio_id=audio_clip.id)
             db.session.add(prediction)
