@@ -138,7 +138,8 @@ def review(prediction_id=None):
     else:
         pred = Prediction.query.get(prediction_id)
 
-    example_species = request.args.get('example_spec') or pred.label
+    example_species = request.args.get('example_spec') or (
+        pred.human_label if pred.human_label else pred.ai_label)
     xform = forms.build_example_form(default_species=example_species)
 
     sample = pred.sample
